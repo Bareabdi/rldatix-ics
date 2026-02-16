@@ -2,14 +2,15 @@ import re
 import requests
 from icalendar import Calendar, Event
 from pathlib import Path
+from datetime import datetime, timezone
 
 SOURCE_ICS_URL = "https://regionhovedstaden.allocate-cloud.de/EmployeeOnlineHealth/REGHLIVE/ical/38a57d6a-b516-494c-986b-3889c34426dc"
 
 RULES = {
-    "modtagelse": ["hefvan", "modtag", "akut", "skad"],
-    "stuegang": ["stg", "stuegang", "he119stg"],
+    "modtagelse": ["modtag", "akut", "skad", "heakm1"],
+    "stuegang": ["stg", "stuegang", "he119stg", "he114stg"],
     "ambulatorie": ["heskamb", "amb", "ambu"],
-    "aften_nat": ["aften", "nat", "natte", "aftenvagt"],
+    "aften_nat": ["hefvan", "aften", "nat", "natte", "aftenvagt"],
 }
 
 FALLBACK_CAL = "andet"
@@ -59,10 +60,37 @@ def main():
         if bucket not in buckets:
             buckets[bucket] = make_calendar(bucket)
 
-        ev = Event()
-        for k, v in comp.property_items():
-            ev.add(k, v)
+                ev = Event()
+
+        summary = comp.get("summary")
+        dtstart = comp.get("dtstart")
+        dtend = comp.get("dtend")
+        dtstamp = comp.get("dtstamp") or datetime.now(timezone.utc)
+        uid = comp.get("uid")
+        description = comp.get("description")
+        location = comp.get("location")
+
+        if summary:
+            ev.add("summary", summary)
+        if dtstart:
+            ev.add("dtstart", dtstart)
+        if dtend:
+            ev.add("dtend", dtend)
+
+        ev.add("dtstamp", dtstamp)
+
+        if uid:
+            ev.add("uid", f"{uid}-{bucket}")
+        else:
+            ev.add("uid", f"gen-{bucket}-{n}")
+
+        if description:
+            ev.add("description", description)
+        if location:
+            ev.add("location", location)
+
         buckets[bucket].add_component(ev)
+
 
     for name, cal in buckets.items():
         (OUTPUT_DIR / f"{name}.ics").write_bytes(cal.to_ical())
