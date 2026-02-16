@@ -30,6 +30,7 @@ jobs:
         run: |
           git config user.name "github-actions"
           git config user.email "actions@github.com"
+          git pull --rebase
           git add out/*.ics || true
           git commit -m "Auto update calendars" || echo "No changes"
           git push
