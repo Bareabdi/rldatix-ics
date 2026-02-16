@@ -1,0 +1,35 @@
+name: Update RLDatix calendars
+
+on:
+  schedule:
+    - cron: "0 3 * * *"   # kører hver nat kl 03
+  workflow_dispatch:
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          pip install requests icalendar
+
+      - name: Run split script
+        run: |
+          python split_ics.py
+
+      - name: Commit updated ICS files
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add out/*.ics || true
+          git commit -m "Auto update calendars" || echo "No changes"
+          git push
